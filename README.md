@@ -43,7 +43,7 @@ consult the [Python Packaging User Guide](https://packaging.python.org/guides/in
 
 **Using Anaconda**
 ```shell
-conda create --name criticality --file=requirements.txt
+conda create --name criticality -c conda-forge --file=requirements.txt
 conda activate criticality
 ```
 
