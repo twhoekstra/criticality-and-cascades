@@ -1,7 +1,7 @@
 # criticality-and-cascades
 Criticality and Cascades
 
-# Install instructions
+# Install
 
 Prerequisites:
 - Git
@@ -51,3 +51,6 @@ conda activate criticality
 ```shell
 jupyter lab
 ```
+
+# Development
+Please work in the `dev` branch of the repository.
