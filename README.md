@@ -3,6 +3,10 @@ Criticality and Cascades
 
 # Install instructions
 
+Prerequisites:
+- Git
+- Python
+
 1. Clone the repository
 ```shell
 git clone https://github.com/twhoekstra/criticality-and-cascades.git
@@ -11,17 +15,18 @@ cd criticality-and-cascades
 
 2. Create a virtual environment (optional but recommended). 
 
-**Using virtual environment** 
+**Using `venv`** 
 ```shell
 python -m venv .venv
 ```
 
-Activate the virtual environment. On Windows:
+Activate the virtual environment. 
+**On Windows:**
 ```shell
 .venv\Scripts\activate.bat
 ```
 
-For Unix:
+**For Unix:**
 ```shell
 source .venv/bin/activate
 ```
@@ -38,7 +43,7 @@ consult the [Python Packaging User Guide](https://packaging.python.org/guides/in
 
 **Using Anaconda**
 ```shell
-conda create --name criticality -file=requirements.txt
+conda create --name criticality --file=requirements.txt
 conda activate criticality
 ```
 
