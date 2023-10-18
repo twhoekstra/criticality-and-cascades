@@ -1,0 +1,7 @@
+brian2
+numpy
+matplotlib
+jupyterlab
+ipympl
+scipy
+scikit-learn
