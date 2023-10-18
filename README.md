@@ -54,3 +54,7 @@ jupyter lab
 
 # Development
 Please work in the `dev` branch of the repository.
+
+```shell
+git checkout dev
+```
