@@ -6,13 +6,13 @@ Criticality and Cascades
 1. Clone the repository
 ```shell
 git clone https://github.com/twhoekstra/criticality-and-cascades.git
+cd criticality-and-cascades
 ```
 
-2. Create a virtual environment (optional but recommended). For more info, 
-consult the [Python Packaging User Guide](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)
+2. Create a virtual environment (optional but recommended). 
 
+**Using virtual environment** 
 ```shell
-cd criticality-and-cascades
 python -m venv .venv
 ```
 
@@ -30,6 +30,16 @@ source .venv/bin/activate
 ```shell
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+For more info, 
+consult the [Python Packaging User Guide](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)
+
+
+**Using Anaconda**
+```shell
+conda create --name criticality -file=requirements.txt
+conda activate criticality
 ```
 
 5. Open Jupyter Lab:
