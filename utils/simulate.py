@@ -92,7 +92,7 @@ class RecurrentNeuralNetwork:
     }
 
     def __init__(self, n: int = 128, g: float = 3, p_c: float = 0.04, gamma=0.8,
-                 p_ext: float = 6E-4, nu_ext_over_nu_thr=0.9):
+                 p_ext: float = 6E-4, nu_ext_over_nu_thr=0.9, seed: int = None):
 
         self.state_monitor = None
         self.spike_monitor = None
@@ -108,6 +108,8 @@ class RecurrentNeuralNetwork:
         self.gamma = gamma
         self.p_ext = p_ext
         self.leader_neuron_idx = None
+
+        np.random.seed(seed)
 
         self.nu_ext_over_nu_thr = nu_ext_over_nu_thr
 
@@ -204,7 +206,7 @@ class RecurrentNeuralNetwork:
 
     def setup_monitors(self, neurons, i=50):
         self.rate_monitor = PopulationRateMonitor(neurons)
-        # record from the first 50 excitatory neurons
+        # record from the first i excitatory neurons
         self.spike_monitor = SpikeMonitor(neurons[:i])
         self.state_monitor = StateMonitor(neurons[:i], 'v', record=True)
 
@@ -220,7 +222,6 @@ class RecurrentNeuralNetwork:
         axs[0].plot(np.zeros(self.n), np.arange(self.n), 'ok', ms=10)
         axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', ms=10)
 
-        n_prev = 0
         for S, c, offset in zip(
                 (self.exc_synapses, self.inhib_synapses),
                 ('b', 'r'),
@@ -241,6 +242,13 @@ class RecurrentNeuralNetwork:
             axs[1].set_xlabel('Source index')
             axs[1].set_ylabel('Target index')
 
+        # Overlay leader neuron
+        for i, j in zip(self.exc_synapses.i, self.exc_synapses.j):
+            if i != self.leader_neuron_idx:
+                continue
+            else:
+                axs[0].plot([0, 1], [i, j], '-', c='yellow')
+
         fig.subplots_adjust(wspace=0.4)
         fig.show()
 
@@ -255,7 +263,7 @@ class RecurrentNeuralNetwork:
         axs[0].imshow(self.state_results.v_mV,
                       aspect='auto',
                       interpolation='nearest',
-                      cmap='Reds',
+                      cmap='Blues',
                       extent=(
                           self.state_results.t_ms[0],
                           self.state_results.t_ms[-1],
@@ -271,7 +279,7 @@ class RecurrentNeuralNetwork:
         axs[1].plot(self.state_results.t_ms, traces, c='blue')
         if self.leader_neuron_idx < traces.shape[1]:
             axs[1].plot(self.state_results.t_ms, traces[:, self.leader_neuron_idx],
-                        label='Leader neuron', c='red')
+                        label='Leader neuron', c='yellow')
 
         axs[1].set_ylabel('Voltage [mV]')
         axs[1].legend()

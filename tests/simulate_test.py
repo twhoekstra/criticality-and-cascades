@@ -18,7 +18,7 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         rnn.plot_state()
 
     def test_sim_plot_connectivity(self):
-        rnn = RecurrentNeuralNetwork(n=100)
+        rnn = RecurrentNeuralNetwork(n=100, seed=1)
         rnn.sim(10)
         rnn.plot_connectivity()
 
