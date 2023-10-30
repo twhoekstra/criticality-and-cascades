@@ -8,21 +8,37 @@ import matplotlib.pyplot as plt
 
 class RecurrentNeuralNetworkTestCase(unittest.TestCase):
 
+    rnn = RecurrentNeuralNetwork(n=10,
+                                 timestep_ms=0.1,
+                                 seed=1).store()
+
     def test_create(self):
         rnn = RecurrentNeuralNetwork(n=10)
 
         self.assertTrue(True)
 
-    def test_sim_run(self):
+    def test_store(self):
         rnn = RecurrentNeuralNetwork(n=10)
-        rnn.sim(100)
+
+        rnn.store()
+
+        self.assertTrue(True)
+
+    def test_restore(self):
+        self.rnn.restore()
+
+        self.assertTrue(True)
+
+    def test_sim_run(self):
+        self.rnn.restore()
+        self.rnn.sim(100)
 
         self.assertTrue(True)
 
     def test_sim_run_activity_shape(self):
-        rnn = RecurrentNeuralNetwork(n=10, timestep_ms=0.1)
-        rnn.sim(100)
-        v = rnn._state_monitor.v
+        self.rnn.restore()
+        self.rnn.sim(100)
+        v = self.rnn._state_monitor.v
 
         self.assertEquals(v.shape[1], 1000)
         self.assertEquals(v.shape[0], 10)
@@ -47,17 +63,17 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.assertTrue(np.nonzero(v))
 
     def test_sim_plot_state(self):
-        rnn = RecurrentNeuralNetwork(n=10)
-        rnn.sim(100)
-        fig, axs = rnn.plot_state(show=False)
+        self.rnn.restore()
+        self.rnn.sim(100)
+        fig, axs = self.rnn.plot_state(show=False)
 
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)
 
     def test_sim_plot_connectivity(self):
-        rnn = RecurrentNeuralNetwork(n=10, seed=1)
-        rnn.sim(100)
-        fig, axs = rnn.plot_connectivity(show=False)
+        self.rnn.restore()
+        self.rnn.sim(100)
+        fig, axs = self.rnn.plot_connectivity(show=False)
 
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)

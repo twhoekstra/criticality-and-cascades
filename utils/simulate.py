@@ -124,8 +124,9 @@ class RecurrentNeuralNetwork:
         # Set random number generator seed (optional)
         np.random.seed(seed)
 
-    def sim(self, sim_time_ms):
         self._setup_network()
+
+    def sim(self, sim_time_ms):
 
         tau = self.tau
         tau_rp = self.tau_rp
@@ -146,9 +147,11 @@ class RecurrentNeuralNetwork:
 
     def store(self):
         self.net.store()
+        return self
 
     def restore(self):
         self.net.restore()
+        return self
 
     def _setup_network(self):
         # network parameters
@@ -242,7 +245,7 @@ class RecurrentNeuralNetwork:
         return self._rate_monitor, self._spike_monitor, self._state_monitor
 
     def plot_connectivity(self, show=True):
-        if self.exc_synapses is None or self.inhib_synapses is None:
+        if self.synapses is None:
             raise SimulationNotRunException('Error, no results yet. '
                                             'Did you run the simulation?')
 
@@ -252,7 +255,7 @@ class RecurrentNeuralNetwork:
         axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', ms=10)
 
         for S, c, offset in zip(
-                (self.exc_synapses, self.inhib_synapses),
+                self.synapses,
                 ('b', 'r'),
                 (0, self.n_e)):
             Ns = len(S.source)
@@ -272,7 +275,7 @@ class RecurrentNeuralNetwork:
             axs[1].set_ylabel('Target index')
 
         # Overlay leader neuron
-        for i, j in zip(self.exc_synapses.i, self.exc_synapses.j):
+        for i, j in zip(self.synapses[0].i, self.synapses[0].j):
             if i != self.leader_neuron_idx:
                 continue
             else:
