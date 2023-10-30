@@ -91,31 +91,44 @@ class RecurrentNeuralNetwork:
         'dt_ms': 0.1
     }
 
-    def __init__(self, n: int = 128, g: float = 3, p_c: float = 0.04, gamma=0.8,
-                 p_ext: float = 6E-4, nu_ext_over_nu_thr=0.9, seed: int = None):
+    def __init__(self,
+                 n: int = 128,
+                 g: float = 3,
+                 p_c: float = 0.04,
+                 gamma=0.8,
+                 p_ext: float = 6E-4,
+                 nu_ext_over_nu_thr=0.9,
+                 seed: int = None,
+                 timestep_ms: float = 0.1):
 
-        self.state_monitor = None
-        self.spike_monitor = None
-        self.rate_monitor = None
-        self.net: Optional[Network] = None
-        self.neurons = None
-        self.inhib_synapses = None
-        self.exc_synapses = None
+        # Parameters
         self.n = n
         self.n_e = None
         self.p_c = p_c
         self.g = 3
         self.gamma = gamma
         self.p_ext = p_ext
+        self.timestep_ms = timestep_ms
         self.leader_neuron_idx = None
 
-        np.random.seed(seed)
-
         self.nu_ext_over_nu_thr = nu_ext_over_nu_thr
+
+        # Brain2 Objects
+        self.neurons = None
+        self.inhib_synapses = None
+        self.exc_synapses = None
+
+        self.state_monitor = None
+        self.spike_monitor = None
+        self.rate_monitor = None
+        self.net: Optional[Network] = None
 
         self.state_results: Optional[StateResults] = None
         self.spike_results: Optional[SpikeResults] = None
         self.rate_results: Optional[RateResults] = None
+
+        # Set random number generator seed (optional)
+        np.random.seed(seed)
 
     def sim(self, sim_time_ms):
 
@@ -143,7 +156,7 @@ class RecurrentNeuralNetwork:
         # Noise rate
         rate = self.p_ext / (self.sim_params['dt_ms'] * 1E-3) * Hz
 
-        defaultclock.dt = 0.1 * ms
+        defaultclock.dt = self.timestep_ms * ms
 
         neurons = NeuronGroup(self.n,
                               """
