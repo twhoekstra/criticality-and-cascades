@@ -71,79 +71,99 @@ class RecurrentNeuralNetwork:
           synapses.
         gamma: Fraction of neurons in the network that are excitatory.
         p_ext: Probability for random activity in a neuron per time step.
-        rate_monitor: Stores instantaneous spiking rates of groups of neurons.
-        spike_monitor: Stores spikes from individual neurons.
+        _rate_monitor: Stores instantaneous spiking rates of groups of neurons.
+        _spike_monitor: Stores spikes from individual neurons.
     """
 
-    neuron_params = {
-        'tau_ms': 20,
-        'theta_mV': 20,
-        'V_r_mV': 10,
-        'tau_rp_ms': 2,
-    }
+    tau = 20 * ms
+    theta = 20 * mV
+    V_r = 10 * mV
+    tau_rp = 2 * ms
 
-    synapse_params = {
-        'J_mV': 0.1,
-        'D_ms': 1.5,
-    }
+    J = 0.1 * mV
+    D = 1.5 * ms
 
-    sim_params = {
-        'dt_ms': 0.1
-    }
+    def __init__(self,
+                 n: int = 128,
+                 g: float = 3,
+                 p_c: float = 0.04,
+                 gamma=0.8,
+                 p_ext: float = 6E-4,
+                 nu_ext_over_nu_thr=0.9,
+                 seed: int = None,
+                 leader_freq: float = 10,
+                 leader_mV: float = 10,
+                 timestep_ms: float = 0.1):
 
-    def __init__(self, n: int = 128, g: float = 3, p_c: float = 0.04, gamma=0.8,
-                 p_ext: float = 6E-4, nu_ext_over_nu_thr=0.9, seed: int = None):
-
-        self.state_monitor = None
-        self.spike_monitor = None
-        self.rate_monitor = None
-        self.net: Optional[Network] = None
-        self.neurons = None
-        self.inhib_synapses = None
-        self.exc_synapses = None
+        # Parameters
         self.n = n
         self.n_e = None
         self.p_c = p_c
         self.g = 3
         self.gamma = gamma
         self.p_ext = p_ext
+        self.timestep_ms = timestep_ms
         self.leader_neuron_idx = None
-
-        np.random.seed(seed)
+        self.leader_rate = leader_freq
+        self.leader_weight = leader_mV
 
         self.nu_ext_over_nu_thr = nu_ext_over_nu_thr
+
+        # Brain2 Objects
+        self.neurons = None
+        self.synapses = None
+
+        self._monitors = None
+
+        self.net: Optional[Network] = None
 
         self.state_results: Optional[StateResults] = None
         self.spike_results: Optional[SpikeResults] = None
         self.rate_results: Optional[RateResults] = None
 
+        # Set random number generator seed (optional)
+        np.random.seed(seed)
+
+        self._setup_network()
+
     def sim(self, sim_time_ms):
 
-        # neuron parameters
-        tau = self.neuron_params['tau_ms'] * ms
-        theta = self.neuron_params['theta_mV'] * mV
-        V_r = self.neuron_params['V_r_mV'] * mV
-        tau_rp = self.neuron_params['tau_rp_ms'] * ms
+        tau = self.tau
+        tau_rp = self.tau_rp
+        V_r = self.V_r
+        theta = self.theta
 
-        # synapse parameters
         g = self.g
-        J = self.synapse_params['J_mV'] * mV
-        D = self.synapse_params['D_ms'] * ms
+        D = self.D
+        J = self.J
 
+        self.net.run(sim_time_ms * ms, report='text')
+
+        self.rate_results = RateResults(self._rate_monitor)
+        self.state_results = StateResults(self._state_monitor)
+        self.spike_results = SpikeResults(self._spike_monitor)
+
+        return 1
+
+    def store(self):
+        self.net.store()
+        return self
+
+    def restore(self):
+        self.net.restore()
+        return self
+
+    def _setup_network(self):
         # network parameters
-        N_E = round(self.gamma * self.n)
-        N_I = self.n - N_E
-        epsilon = 0.1
-        C_E = epsilon * N_E
-        C_ext = C_E
+        C_E, self.n_e = self._get_network_params()
 
         # external stimulus
-        nu_thr = theta / (J * C_E * tau)
+        nu_thr = self._get_external_stim_amp(C_E)
 
         # Noise rate
-        rate = self.p_ext / (self.sim_params['dt_ms'] * 1E-3) * Hz
+        rate = self._get_noise_rate()
 
-        defaultclock.dt = 0.1 * ms
+        defaultclock.dt = self.timestep_ms * ms
 
         neurons = NeuronGroup(self.n,
                               """
@@ -151,69 +171,81 @@ class RecurrentNeuralNetwork:
                               """,
                               threshold="v > theta",
                               reset="v = V_r",
-                              refractory=tau_rp,
+                              refractory=self.tau_rp,
                               method="exact",
                               )
 
-        excitatory_neurons = neurons[:N_E]
-        inhibitory_neurons = neurons[N_E:]
-
-        self.exc_synapses = Synapses(excitatory_neurons,
-                                     target=neurons,
-                                     on_pre="v += J",
-                                     delay=D)
-        self.exc_synapses.connect(p=self.p_c, condition='i!=j')
-
-        self.inhib_synapses = Synapses(inhibitory_neurons,
-                                       target=neurons,
-                                       on_pre="v += -g*J",
-                                       delay=D)
-        self.inhib_synapses.connect(p=self.p_c,
-                                    condition='i!=j')  # No self connections
+        self.synapses = self._get_synapses(neurons, self.n_e)
 
         nu_ext = self.nu_ext_over_nu_thr * nu_thr
         external_poisson_input = PoissonInput(
             target=neurons, target_var="v", N=self.n, rate=rate,
-            weight=J
+            weight=self.J
         )
 
-        idx = np.random.randint(0, N_E)
+        idx = np.random.randint(0, self.n_e)
         self.leader_neuron_idx = idx
-        leading_neuron = excitatory_neurons[idx:idx + 1]
+        leading_neuron = neurons[idx:idx + 1]
 
         leading_neuron_input = PoissonInput(
             target=leading_neuron,
-            target_var="v", N=1, rate=5 * Hz,
-            weight=10 * mV
+            target_var="v", N=1, rate=self.leader_rate * Hz,
+            weight=self.leader_weight * mV
         )
 
-        monitors = self.setup_monitors(neurons)
+        self._monitors = self.setup_monitors(neurons)
+        self.neurons = neurons
 
         self.net = Network(collect())
-        self.net.add(monitors)
-        self.net.add((self.exc_synapses, self.inhib_synapses))
+        self.net.add(self._monitors)
+        self.net.add(self.synapses)
 
-        self.neurons = neurons
-        self.n_e = N_E
+    def _get_synapses(self, neurons, N_E):
 
-        self.net.run(sim_time_ms * ms, report='text')
+        excitatory_neurons = neurons[:N_E]
+        inhibitory_neurons = neurons[N_E:]
 
-        self.rate_results = RateResults(self.rate_monitor)
-        self.state_results = StateResults(self.state_monitor)
-        self.spike_results = SpikeResults(self.spike_monitor)
+        exc_synapses = Synapses(excitatory_neurons,
+                                target=neurons,
+                                on_pre="v += J",
+                                delay=self.D,
+                                name="exc")
+        exc_synapses.connect(p=self.p_c, condition='i!=j')
+        inhib_synapses = Synapses(inhibitory_neurons,
+                                  target=neurons,
+                                  on_pre="v += -g*J",
+                                  delay=self.D,
+                                  name="inhib")
+        inhib_synapses.connect(p=self.p_c,
+                               condition='i!=j')  # No self connections
 
-        return 1
+        return exc_synapses, inhib_synapses
+
+    def _get_external_stim_amp(self, C_E):
+        return self.theta / (self.J * C_E * self.tau)
+
+    def _get_noise_rate(self):
+        rate = self.p_ext / (self.timestep_ms * ms)
+        return rate
+
+    def _get_network_params(self):
+        N_E = round(self.gamma * self.n)
+
+        epsilon = 0.1
+        C_E = epsilon * N_E
+
+        return C_E, N_E
 
     def setup_monitors(self, neurons, i=50):
-        self.rate_monitor = PopulationRateMonitor(neurons)
+        self._rate_monitor = PopulationRateMonitor(neurons)
         # record from the first i excitatory neurons
-        self.spike_monitor = SpikeMonitor(neurons[:i])
-        self.state_monitor = StateMonitor(neurons[:i], 'v', record=True)
+        self._spike_monitor = SpikeMonitor(neurons[:i])
+        self._state_monitor = StateMonitor(neurons[:i], 'v', record=True)
 
-        return self.rate_monitor, self.spike_monitor, self.state_monitor
+        return self._rate_monitor, self._spike_monitor, self._state_monitor
 
-    def plot_connectivity(self):
-        if self.exc_synapses is None or self.inhib_synapses is None:
+    def plot_connectivity(self, show=True):
+        if self.synapses is None:
             raise SimulationNotRunException('Error, no results yet. '
                                             'Did you run the simulation?')
 
@@ -223,7 +255,7 @@ class RecurrentNeuralNetwork:
         axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', ms=10)
 
         for S, c, offset in zip(
-                (self.exc_synapses, self.inhib_synapses),
+                self.synapses,
                 ('b', 'r'),
                 (0, self.n_e)):
             Ns = len(S.source)
@@ -243,14 +275,17 @@ class RecurrentNeuralNetwork:
             axs[1].set_ylabel('Target index')
 
         # Overlay leader neuron
-        for i, j in zip(self.exc_synapses.i, self.exc_synapses.j):
+        for i, j in zip(self.synapses[0].i, self.synapses[0].j):
             if i != self.leader_neuron_idx:
                 continue
             else:
                 axs[0].plot([0, 1], [i, j], '-', c='yellow')
 
         fig.subplots_adjust(wspace=0.4)
-        fig.show()
+        if show:
+            fig.show()
+
+        return fig, axs
 
     def plot_state(self, show=True):
 
@@ -278,7 +313,8 @@ class RecurrentNeuralNetwork:
 
         axs[1].plot(self.state_results.t_ms, traces, c='blue')
         if self.leader_neuron_idx < traces.shape[1]:
-            axs[1].plot(self.state_results.t_ms, traces[:, self.leader_neuron_idx],
+            axs[1].plot(self.state_results.t_ms,
+                        traces[:, self.leader_neuron_idx],
                         label='Leader neuron', c='yellow')
 
         axs[1].set_ylabel('Voltage [mV]')
@@ -289,7 +325,7 @@ class RecurrentNeuralNetwork:
         if show:
             fig.show()
 
-        return 1
+        return fig, axs
 
     def plot_spikes(self,
                     title=None,
@@ -334,4 +370,4 @@ class RecurrentNeuralNetwork:
         if show:
             fig.show()
 
-        return 1
+        return fig, (ax_spikes, ax_rates)
