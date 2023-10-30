@@ -91,6 +91,8 @@ class RecurrentNeuralNetwork:
                  p_ext: float = 6E-4,
                  nu_ext_over_nu_thr=0.9,
                  seed: int = None,
+                 leader_freq: float = 10,
+                 leader_mV: float = 10,
                  timestep_ms: float = 0.1):
 
         # Parameters
@@ -102,6 +104,8 @@ class RecurrentNeuralNetwork:
         self.p_ext = p_ext
         self.timestep_ms = timestep_ms
         self.leader_neuron_idx = None
+        self.leader_rate = leader_freq
+        self.leader_weight = leader_mV
 
         self.nu_ext_over_nu_thr = nu_ext_over_nu_thr
 
@@ -182,8 +186,8 @@ class RecurrentNeuralNetwork:
 
         leading_neuron_input = PoissonInput(
             target=leading_neuron,
-            target_var="v", N=1, rate=5 * Hz,  # TODO: Parametrize this
-            weight=10 * mV
+            target_var="v", N=1, rate=self.leader_rate * Hz,
+            weight=self.leader_weight * mV
         )
 
         self._monitors = self.setup_monitors(neurons)
@@ -223,10 +227,10 @@ class RecurrentNeuralNetwork:
 
     def _get_network_params(self):
         N_E = round(self.gamma * self.n)
-        N_I = self.n - N_E
+
         epsilon = 0.1
         C_E = epsilon * N_E
-        C_ext = C_E
+
         return C_E, N_E
 
     def setup_monitors(self, neurons, i=50):
