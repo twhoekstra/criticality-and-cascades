@@ -212,7 +212,7 @@ class RecurrentNeuralNetwork:
 
         return self.rate_monitor, self.spike_monitor, self.state_monitor
 
-    def plot_connectivity(self):
+    def plot_connectivity(self, show=True):
         if self.exc_synapses is None or self.inhib_synapses is None:
             raise SimulationNotRunException('Error, no results yet. '
                                             'Did you run the simulation?')
@@ -250,7 +250,10 @@ class RecurrentNeuralNetwork:
                 axs[0].plot([0, 1], [i, j], '-', c='yellow')
 
         fig.subplots_adjust(wspace=0.4)
-        fig.show()
+        if show:
+            fig.show()
+
+        return fig, axs
 
     def plot_state(self, show=True):
 
@@ -289,7 +292,7 @@ class RecurrentNeuralNetwork:
         if show:
             fig.show()
 
-        return 1
+        return fig, axs
 
     def plot_spikes(self,
                     title=None,
@@ -334,4 +337,4 @@ class RecurrentNeuralNetwork:
         if show:
             fig.show()
 
-        return 1
+        return fig, (ax_spikes, ax_rates)
