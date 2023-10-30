@@ -140,6 +140,12 @@ class RecurrentNeuralNetwork:
 
         return 1
 
+    def store(self):
+        self.net.store()
+
+    def restore(self):
+        self.net.restore()
+
     def _setup_network(self):
         # network parameters
         C_E, self.n_e = self._get_network_params()
