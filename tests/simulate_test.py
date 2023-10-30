@@ -22,7 +22,7 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
     def test_sim_run_activity_shape(self):
         rnn = RecurrentNeuralNetwork(n=10, timestep_ms=0.1)
         rnn.sim(100)
-        v = rnn.state_monitor.v
+        v = rnn._state_monitor.v
 
         self.assertEquals(v.shape[1], 1000)
         self.assertEquals(v.shape[0], 10)
@@ -41,6 +41,8 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         rnn = RecurrentNeuralNetwork(n=10, p_c=1, gamma=0.1, seed=1)
         rnn.sim(100)
         v = rnn.state_results.v_mV
+
+        rnn.plot_state(show=False)
 
         self.assertTrue(np.nonzero(v))
 
@@ -61,8 +63,8 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.assertIsNotNone(axs)
 
     def test_sim_plot_state_big(self):
-        rnn = RecurrentNeuralNetwork(n=10, g=10)
-        rnn.sim(100)
+        rnn = RecurrentNeuralNetwork(n=100, seed=1)
+        rnn.sim(1000)
         fig, axs = rnn.plot_state(show=False)
 
         self.assertIsNotNone(fig)

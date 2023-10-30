@@ -107,12 +107,9 @@ class RecurrentNeuralNetwork:
 
         # Brain2 Objects
         self.neurons = None
-        self.inhib_synapses = None
-        self.exc_synapses = None
+        self.synapses = None
 
-        self._state_monitor = None
-        self._spike_monitor = None
-        self._rate_monitor = None
+        self._monitors = None
 
         self.net: Optional[Network] = None
 
@@ -145,12 +142,16 @@ class RecurrentNeuralNetwork:
 
     def _setup_network(self):
         # network parameters
-        C_E, N_E = self._get_network_params()
+        C_E, self.n_e = self._get_network_params()
+
         # external stimulus
         nu_thr = self._get_external_stim_amp(C_E)
+
         # Noise rate
         rate = self._get_noise_rate()
+
         defaultclock.dt = self.timestep_ms * ms
+
         neurons = NeuronGroup(self.n,
                               """
                               dv/dt = -v/tau : volt (unless refractory)
@@ -160,41 +161,48 @@ class RecurrentNeuralNetwork:
                               refractory=self.tau_rp,
                               method="exact",
                               )
-        excitatory_neurons = neurons[:N_E]
-        inhibitory_neurons = neurons[N_E:]
-        synapses = self._get_synapses(excitatory_neurons, inhibitory_neurons,
-                                      neurons)
+
+        self.synapses = self._get_synapses(neurons, self.n_e)
+
         nu_ext = self.nu_ext_over_nu_thr * nu_thr
         external_poisson_input = PoissonInput(
             target=neurons, target_var="v", N=self.n, rate=rate,
             weight=self.J
         )
-        idx = np.random.randint(0, N_E)
+
+        idx = np.random.randint(0, self.n_e)
         self.leader_neuron_idx = idx
-        leading_neuron = excitatory_neurons[idx:idx + 1]
+        leading_neuron = neurons[idx:idx + 1]
+
         leading_neuron_input = PoissonInput(
             target=leading_neuron,
             target_var="v", N=1, rate=5 * Hz,  # TODO: Parametrize this
             weight=10 * mV
         )
-        monitors = self.setup_monitors(neurons)
-        self.neurons = neurons
-        self.n_e = N_E
-        self.exc_synapses, self.inhib_synapses = synapses
-        self.net = Network(collect())
-        self.net.add(monitors)
-        self.net.add(synapses)
 
-    def _get_synapses(self, excitatory_neurons, inhibitory_neurons, neurons):
+        self._monitors = self.setup_monitors(neurons)
+        self.neurons = neurons
+
+        self.net = Network(collect())
+        self.net.add(self._monitors)
+        self.net.add(self.synapses)
+
+    def _get_synapses(self, neurons, N_E):
+
+        excitatory_neurons = neurons[:N_E]
+        inhibitory_neurons = neurons[N_E:]
+
         exc_synapses = Synapses(excitatory_neurons,
                                 target=neurons,
                                 on_pre="v += J",
-                                delay=self.D)
+                                delay=self.D,
+                                name="exc")
         exc_synapses.connect(p=self.p_c, condition='i!=j')
         inhib_synapses = Synapses(inhibitory_neurons,
                                   target=neurons,
                                   on_pre="v += -g*J",
-                                  delay=self.D)
+                                  delay=self.D,
+                                  name="inhib")
         inhib_synapses.connect(p=self.p_c,
                                condition='i!=j')  # No self connections
 
@@ -214,8 +222,6 @@ class RecurrentNeuralNetwork:
         C_E = epsilon * N_E
         C_ext = C_E
         return C_E, N_E
-
-
 
     def setup_monitors(self, neurons, i=50):
         self._rate_monitor = PopulationRateMonitor(neurons)
