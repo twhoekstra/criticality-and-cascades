@@ -369,8 +369,8 @@ class RecurrentNeuralNetwork:
 
         ax_spikes, ax_rates = gs.subplots(sharex="col")
 
-        ax_spikes.plot(self.spike_results.as_array(), "|")
-        ax_rates.plot(self.rate_results.as_array())
+        ax_spikes.plot(self.spike_results.t_ms, self.spike_results.i, "|")
+        ax_rates.plot(self.rate_results.t_ms, self.rate_results.rate)
 
         ax_spikes.set_yticks([])
 

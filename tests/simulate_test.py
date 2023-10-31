@@ -97,6 +97,14 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)
 
+    def test_sim_plot_spikes_and_rates(self):
+        self.test_rnn.restore('test')
+        self.test_rnn.sim(1000)
+        fig, axs = self.test_rnn.plot_spikes(show=True)
+
+        self.assertIsNotNone(fig)
+        self.assertIsNotNone(axs)
+
     def test_sim_plot_state_big(self):
         rnn = RecurrentNeuralNetwork(n=100, seed=1)
         rnn.sim(1000)
