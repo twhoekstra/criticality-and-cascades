@@ -93,13 +93,12 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
 
         self.assertTrue(True)
 
-    def test_sim(self):
-        rnn = RecurrentNeuralNetwork(n=4, p_c=1, gamma=0.70, g=0)
-        rnn.plot_connectivity()
+    def test_sim_spike_distr(self):
+        rnn = RecurrentNeuralNetwork(n=1000, w=10)
+        rnn.sim(500)
 
-        rnn.sim(1000)
-
-        fig, _ = rnn.plot_state(show=True)
+        rnn.plot_spikes()
+        rnn.plot_spike_distribution()
 
         self.assertTrue(True)
 

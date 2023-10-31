@@ -94,8 +94,8 @@ class RecurrentNeuralNetwork:
     """
 
     def __init__(self,
-                 n: int = 128,
-                 w: float = 1,
+                 n: int = 100,
+                 w: float = 10,
                  g: float = 3,
                  p_c: float = 0.04,
                  gamma=0.8,
@@ -107,9 +107,9 @@ class RecurrentNeuralNetwork:
         """Initializes LIF RNN.
 
         Args:
-            n: Number of neurons in the network. Defaults to 128 as seen in Kanders
-              et. al.
-            w: Weight scaling for synaptic strength. Defaults to 1.
+            n: Number of neurons in the network. Defaults to 1000.
+            w: Weight scaling for synaptic strength. Defaults to 10, which lies
+              somewhat around the critical point.
             g: Relative strength of inhibitory synapses with respect to exitatory
               synapses. Defaults to 3 as seen in Kanders et. al.
             p_c: Connection probability. Defaults to 4% to make a sparse network
@@ -276,6 +276,47 @@ class RecurrentNeuralNetwork:
         C_E = self.p_c * N_E
 
         return C_E, N_E
+
+    def get_spike_distribution(self, delta_t_ms: float = 1):
+        t_ms = self.spike_results.t_ms
+
+        num_bins = int(t_ms[-1] / delta_t_ms)
+
+        spikes, bins = np.histogram(t_ms, num_bins)
+        spike_range = np.arange(0, np.max(spikes), 1)
+        # plt.plot(spikes)
+        # plt.show()
+
+        counts, _ = np.histogram(spikes, bins=spike_range)
+
+        mask = counts != 0
+
+        return spike_range[:-1][mask], counts[mask]
+
+    def plot_spike_distribution(self, delta_t_ms=0.5, show=True):
+        fig, ax = plt.subplots(1, 1)
+
+        spikes, counts = self.get_spike_distribution(delta_t_ms=delta_t_ms)
+
+        log_spikes = np.log10(spikes)
+        log_counts = np.log10(counts)
+
+        a, b = np.polyfit(log_spikes[1:], log_counts[1:], 1)
+
+        x = np.linspace(spikes[0], spikes[1])
+        y = np.power(10, a * x + b)
+
+        ax.loglog(spikes, counts, '.-', c='b')
+        ax.loglog(np.power(10, x), y, '--', c='r')
+
+        ax.text(np.power(10, np.median(x)), np.median(y)*1.1, r'$\alpha\approx$' + f'{-a:.2f}', c='r')
+        ax.set_xlabel('S [spikes]')
+        ax.set_ylabel('counts')
+
+        if show:
+            fig.show()
+
+        return fig, ax
 
     def set_w(self, w):
         self.w = w
