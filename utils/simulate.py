@@ -44,6 +44,7 @@ class RateResults:
     def as_array(self):
         return np.vstack((self.t_ms, self.rate))
 
+
 @dataclass
 class Monitors:
     state: StateMonitor
@@ -80,11 +81,7 @@ class RecurrentNeuralNetwork:
           synapses.
         gamma: Fraction of neurons in the network that are excitatory.
         p_ext: Probability for random activity in a neuron per time step.
-        _rate_monitor: Stores instantaneous spiking rates of groups of neurons.
-        _spike_monitor: Stores spikes from individual neurons.
     """
-
-
 
     def __init__(self,
                  n: int = 128,
@@ -267,7 +264,8 @@ class RecurrentNeuralNetwork:
         spike_monitor = SpikeMonitor(neurons[:i])
         state_monitor = StateMonitor(neurons[:i], 'v', record=True)
 
-        return Monitors(state=state_monitor, spike=spike_monitor, rate=rate_monitor)
+        return Monitors(state=state_monitor, spike=spike_monitor,
+                        rate=rate_monitor)
 
     def plot_connectivity(self, show=True):
         if self.synapses is None:

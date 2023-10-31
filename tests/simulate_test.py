@@ -70,6 +70,7 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
 
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)
+
     def test_sim_various_w(self):
         ws = [1, 10, 100]
 
