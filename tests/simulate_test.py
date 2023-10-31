@@ -58,7 +58,7 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         rnn.sim(100)
         v = rnn.state_results.v_mV
 
-        rnn.plot_state(show=True)
+        rnn.plot_voltage(show=True)
 
         self.assertTrue(np.nonzero(v))
 
@@ -66,7 +66,7 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.test_rnn.restore('test')
 
         self.test_rnn.sim(1000)
-        fig, axs = self.test_rnn.plot_state(show=True)
+        fig, axs = self.test_rnn.plot_voltage(show=True)
 
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)
@@ -121,7 +121,7 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
     def test_sim_plot_state_big(self):
         rnn = RecurrentNeuralNetwork(n=100, seed=1)
         rnn.sim(1000)
-        fig, axs = rnn.plot_state(show=False)
+        fig, axs = rnn.plot_voltage(show=False)
 
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)

@@ -293,7 +293,7 @@ class RecurrentNeuralNetwork:
 
         return spike_range[:-1][mask], counts[mask]
 
-    def plot_spike_distribution(self, delta_t_ms=0.5, show=True):
+    def plot_spike_distribution(self, delta_t_ms=0.5, show=False):
         fig, ax = plt.subplots(1, 1)
 
         spikes, counts = self.get_spike_distribution(delta_t_ms=delta_t_ms)
@@ -333,7 +333,7 @@ class RecurrentNeuralNetwork:
         return Monitors(state=state_monitor, spike=spike_monitor,
                         rate=rate_monitor)
 
-    def plot_connectivity(self, show=True):
+    def plot_connectivity(self, show=False):
         if self._synapses is None:
             raise SimulationNotRunException('Error, no results yet. '
                                             'Did you run the simulation?')
@@ -376,7 +376,7 @@ class RecurrentNeuralNetwork:
 
         return fig, axs
 
-    def plot_state(self, show=True):
+    def plot_voltage(self, show=False):
 
         if self.spike_results is None:
             raise SimulationNotRunException('Error, no results yet. '
@@ -421,7 +421,7 @@ class RecurrentNeuralNetwork:
                     title=None,
                     t_range: tuple = None,
                     rate_range: tuple = None,
-                    show=True,
+                    show=False,
                     rate_tick_step: float = 50, ):
 
         if self.spike_results is None or self.rate_results is None:
