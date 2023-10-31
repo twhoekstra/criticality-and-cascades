@@ -94,7 +94,7 @@ class RecurrentNeuralNetwork:
     """
 
     def __init__(self,
-                 n: int = 100,
+                 n: int = 1000,
                  w: float = 10,
                  g: float = 3,
                  p_c: float = 0.04,
