@@ -101,8 +101,7 @@ class RecurrentNeuralNetwork:
                  gamma=0.8,
                  p_ext: float = 6E-4,
                  seed: int = None,
-                 leader_rate: float = 10,
-                 leader_mV: float = None,
+                 leader_rate: float = 100,
                  timestep_ms: float = 0.1):
 
         """Initializes LIF RNN.
@@ -123,8 +122,6 @@ class RecurrentNeuralNetwork:
               network generation. Defaults to None (random).
             leader_rate: Frequency of input to the leader neuron in Hz. Defaults
               to 10 Hz.
-            leader_mV: Magnitude of input to the leader neuron in mV. Defaults to
-              2 times the threshold voltage.
             timestep_ms: Timestep in milliseconds. Defaults to 0.1 as per Brunel et.
               al.
         """
@@ -148,7 +145,6 @@ class RecurrentNeuralNetwork:
         self.timestep_ms = timestep_ms
         self.leader_neuron_idx = None
         self.leader_rate = leader_rate
-        self.leader_weight = leader_mV if leader_mV else self.tau / ms * 2
 
         # Brain2 Objects
         self._neurons = None
@@ -220,9 +216,10 @@ class RecurrentNeuralNetwork:
                               )
 
         self._synapses = self._get_synapses(neurons, self.n_e)
+        nu_ext = 1 * self.theta / (self.J * C_E * self.tau)
 
         external_poisson_input = PoissonInput(
-            target=neurons, target_var="v", N=self.n, rate=rate,
+            target=neurons, target_var="v", N=C_E, rate=nu_ext*0.8,
             weight=self.J
         )
 
@@ -233,7 +230,7 @@ class RecurrentNeuralNetwork:
         leading_neuron_input = PoissonInput(
             target=leading_neuron,
             target_var="v", N=1, rate=self.leader_rate * Hz,
-            weight=self.leader_weight * mV
+            weight=self.theta
         )
 
         self._monitors = self.setup_monitors(neurons)
@@ -276,9 +273,7 @@ class RecurrentNeuralNetwork:
 
     def _get_network_params(self):
         N_E = round(self.gamma * self.n)
-
-        epsilon = 0.1
-        C_E = epsilon * N_E
+        C_E = self.p_c * N_E
 
         return C_E, N_E
 

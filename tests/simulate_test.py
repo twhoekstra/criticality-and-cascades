@@ -72,9 +72,9 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.assertIsNotNone(axs)
 
     def test_sim_various_w(self):
-        ws = [1, 10, 100]
+        ws = [5, 10, 11]
 
-        rnn = RecurrentNeuralNetwork(n=128)
+        rnn = RecurrentNeuralNetwork(n=1000)
 
         rnn.store('various_w')
 
@@ -85,7 +85,21 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
 
             rnn.sim(1000)
 
-            fig, _ = rnn.plot_state(show=True)
+            # = rnn.plot_state(show=True)
+            fig, axs = rnn.plot_spikes(show=False)
+            axs[0].set_title(f'w={w}')
+            fig.show()
+
+
+        self.assertTrue(True)
+
+    def test_sim(self):
+        rnn = RecurrentNeuralNetwork(n=4, p_c=1, gamma=0.70, g=0)
+        rnn.plot_connectivity()
+
+        rnn.sim(1000)
+
+        fig, _ = rnn.plot_state(show=True)
 
         self.assertTrue(True)
 
