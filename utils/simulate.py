@@ -62,25 +62,35 @@ class RecurrentNeuralNetwork:
     Simulation based on Brunel, N. 2000 example of the ``brian2`` Python
     package: https://brian2.readthedocs.io/en/stable/examples/frompapers.Brunel_2000.html#example-brunel-2000
 
-    The recurrent neural network has excitatory in inhibitory neurons.
-    No self connections
+    Experimental setup inspired by "Avalanche and edge-of-chaos criticality do
+    not necessarily co-occur in neural networks" by Kanders et. al.:
+    https://doi.org/10.1063/1.4978998
 
-    Args:
-        n: Number of neurons in the network.
-        p_c: Connection probability. Defaults to 4% to make a sparse network.
-        g: Relative strength of inhibitory synapses with respect to exitatory
-          synapses.
-        gamma: Fraction of neurons in the network that are excitatory.
-        p_ext: Probability for random activity in a neuron per time step.
-          Adds noise.
+    The recurrent neural network has excitatory in inhibitory neurons. There
+    are no self-connections.
 
     Attributes:
-        n: Number of neurons in the network.
-        p_c: Connection probability.
+        tau: LIF neuron time constant.
+        theta: LIF neuron threshold.
+        V_r: Reset value for LIF neuron.
+        tau_rp: Characteristic length of the refractory period in the LIF
+          neurons.
+        J: Base synaptic strength for LIF neuron.
+        D: Synaptic delay for LIF neuron.
+        n: Total number of neurons in the network.
+        w: Weight scaling for synaptic strength.
+        n_e: Number of excitatory neurons.
+        p_c: Connection probability from one neuron to another.
         g: Relative strength of inhibitory synapses with respect to exitatory
-          synapses.
+          synapses
         gamma: Fraction of neurons in the network that are excitatory.
         p_ext: Probability for random activity in a neuron per time step.
+        timestep_ms: Timestep in milliseconds. Defaults to 0.1 as per Brunel
+          et. al.
+        leader_neuron_idx: Index of the leader neuron. Note that the leader
+          neuron is always excitatory.
+        leader_rate: Frequency of input to the leader neuron in Hz.
+        leader_weight: Magnitude of input to the leader neuron.
     """
 
     def __init__(self,
@@ -90,11 +100,34 @@ class RecurrentNeuralNetwork:
                  p_c: float = 0.04,
                  gamma=0.8,
                  p_ext: float = 6E-4,
-                 nu_ext_over_nu_thr=0.9,
                  seed: int = None,
-                 leader_freq: float = 10,
-                 leader_mV: float = 50,
+                 leader_rate: float = 10,
+                 leader_mV: float = None,
                  timestep_ms: float = 0.1):
+
+        """Initializes LIF RNN.
+
+        Args:
+            n: Number of neurons in the network. Defaults to 128 as seen in Kanders
+              et. al.
+            w: Weight scaling for synaptic strength. Defaults to 1.
+            g: Relative strength of inhibitory synapses with respect to exitatory
+              synapses. Defaults to 3 as seen in Kanders et. al.
+            p_c: Connection probability. Defaults to 4% to make a sparse network
+              as per Kanders et. al.
+            gamma: Fraction of neurons in the network that are excitatory. Defaults
+              to 0.8 as seen in Kanders et. al.
+            p_ext: Probability for random activity in a neuron per time step.
+              Adds noise. Defaults to 6E-4 as seen in Kanders et. al.
+            seed: Seed with which to initialize random number generator. Used for
+              network generation. Defaults to None (random).
+            leader_rate: Frequency of input to the leader neuron in Hz. Defaults
+              to 10 Hz.
+            leader_mV: Magnitude of input to the leader neuron in mV. Defaults to
+              2 times the threshold voltage.
+            timestep_ms: Timestep in milliseconds. Defaults to 0.1 as per Brunel et.
+              al.
+        """
 
         # Parameters
         self.tau = 20 * ms
@@ -114,18 +147,16 @@ class RecurrentNeuralNetwork:
         self.p_ext = p_ext
         self.timestep_ms = timestep_ms
         self.leader_neuron_idx = None
-        self.leader_rate = leader_freq
-        self.leader_weight = leader_mV
-
-        self.nu_ext_over_nu_thr = nu_ext_over_nu_thr
+        self.leader_rate = leader_rate
+        self.leader_weight = leader_mV if leader_mV else self.tau / ms * 2
 
         # Brain2 Objects
-        self.neurons = None
-        self.synapses = None
+        self._neurons = None
+        self._synapses = None
 
         self._monitors = None
 
-        self.net: Optional[Network] = None
+        self._net: Optional[Network] = None
 
         self.state_results: Optional[StateResults] = None
         self.spike_results: Optional[SpikeResults] = None
@@ -146,7 +177,7 @@ class RecurrentNeuralNetwork:
         D = self.D
         J = self.J
 
-        self.net.run(sim_time_ms * ms, report='text')
+        self._net.run(sim_time_ms * ms, report='text')
 
         self.rate_results = RateResults(self._monitors.rate)
         self.spike_results = SpikeResults(self._monitors.spike)
@@ -155,11 +186,11 @@ class RecurrentNeuralNetwork:
         return 1
 
     def store(self, *args, **kwargs):
-        self.net.store(*args, **kwargs)
+        self._net.store(*args, **kwargs)
         return self
 
     def restore(self, *args, **kwargs):
-        self.net.restore(*args, **kwargs)
+        self._net.restore(*args, **kwargs)
         return self
 
     def _setup_network(self, seed: int = None):
@@ -188,9 +219,8 @@ class RecurrentNeuralNetwork:
                               method="exact",
                               )
 
-        self.synapses = self._get_synapses(neurons, self.n_e)
+        self._synapses = self._get_synapses(neurons, self.n_e)
 
-        nu_ext = self.nu_ext_over_nu_thr * nu_thr
         external_poisson_input = PoissonInput(
             target=neurons, target_var="v", N=self.n, rate=rate,
             weight=self.J
@@ -207,11 +237,11 @@ class RecurrentNeuralNetwork:
         )
 
         self._monitors = self.setup_monitors(neurons)
-        self.neurons = neurons
+        self._neurons = neurons
 
-        self.net = Network(collect())
-        self.net.add(self._monitors.as_tuple())
-        self.net.add(self.synapses)
+        self._net = Network(collect())
+        self._net.add(self._monitors.as_tuple())
+        self._net.add(self._synapses)
 
         # Clear seeding
         np.random.seed(None)
@@ -268,7 +298,7 @@ class RecurrentNeuralNetwork:
                         rate=rate_monitor)
 
     def plot_connectivity(self, show=True):
-        if self.synapses is None:
+        if self._synapses is None:
             raise SimulationNotRunException('Error, no results yet. '
                                             'Did you run the simulation?')
 
@@ -278,7 +308,7 @@ class RecurrentNeuralNetwork:
         axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', ms=10)
 
         for S, c, offset in zip(
-                self.synapses,
+                self._synapses,
                 ('b', 'r'),
                 (0, self.n_e)):
             Ns = len(S.source)
@@ -298,7 +328,7 @@ class RecurrentNeuralNetwork:
             axs[1].set_ylabel('Target index')
 
         # Overlay leader neuron
-        for i, j in zip(self.synapses[0].i, self.synapses[0].j):
+        for i, j in zip(self._synapses[0].i, self._synapses[0].j):
             if i != self.leader_neuron_idx:
                 continue
             else:
