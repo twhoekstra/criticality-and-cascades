@@ -44,6 +44,15 @@ class RateResults:
     def as_array(self):
         return np.vstack((self.t_ms, self.rate))
 
+@dataclass
+class Monitors:
+    state: StateMonitor
+    spike: SpikeMonitor
+    rate: PopulationRateMonitor
+
+    def as_tuple(self):
+        return self.state, self.spike, self.rate
+
 
 class RecurrentNeuralNetwork:
     """Recurrent Neural Network of LIF neurons.
@@ -75,16 +84,11 @@ class RecurrentNeuralNetwork:
         _spike_monitor: Stores spikes from individual neurons.
     """
 
-    tau = 20 * ms
-    theta = 20 * mV
-    V_r = 10 * mV
-    tau_rp = 2 * ms
 
-    J = 0.1 * mV
-    D = 1.5 * ms
 
     def __init__(self,
                  n: int = 128,
+                 w: float = 1,
                  g: float = 3,
                  p_c: float = 0.04,
                  gamma=0.8,
@@ -92,11 +96,20 @@ class RecurrentNeuralNetwork:
                  nu_ext_over_nu_thr=0.9,
                  seed: int = None,
                  leader_freq: float = 10,
-                 leader_mV: float = 10,
+                 leader_mV: float = 50,
                  timestep_ms: float = 0.1):
 
         # Parameters
+        self.tau = 20 * ms
+        self.theta = 20 * mV
+        self.V_r = 10 * mV
+        self.tau_rp = 2 * ms
+
+        self.J = 0.1 * mV
+        self.D = 1.5 * ms
+
         self.n = n
+        self.w = w
         self.n_e = None
         self.p_c = p_c
         self.g = 3
@@ -121,10 +134,8 @@ class RecurrentNeuralNetwork:
         self.spike_results: Optional[SpikeResults] = None
         self.rate_results: Optional[RateResults] = None
 
-        # Set random number generator seed (optional)
-        np.random.seed(seed)
-
-        self._setup_network()
+        self.seed = seed
+        self._setup_network(seed)
 
     def sim(self, sim_time_ms):
 
@@ -133,27 +144,32 @@ class RecurrentNeuralNetwork:
         V_r = self.V_r
         theta = self.theta
 
+        w = self.w
         g = self.g
         D = self.D
         J = self.J
 
         self.net.run(sim_time_ms * ms, report='text')
 
-        self.rate_results = RateResults(self._rate_monitor)
-        self.state_results = StateResults(self._state_monitor)
-        self.spike_results = SpikeResults(self._spike_monitor)
+        self.rate_results = RateResults(self._monitors.rate)
+        self.spike_results = SpikeResults(self._monitors.spike)
+        self.state_results = StateResults(self._monitors.state)
 
         return 1
 
-    def store(self):
-        self.net.store()
+    def store(self, *args, **kwargs):
+        self.net.store(*args, **kwargs)
         return self
 
-    def restore(self):
-        self.net.restore()
+    def restore(self, *args, **kwargs):
+        self.net.restore(*args, **kwargs)
         return self
 
-    def _setup_network(self):
+    def _setup_network(self, seed: int = None):
+
+        # Set random number generator seed (optional)
+        np.random.seed(seed)
+
         # network parameters
         C_E, self.n_e = self._get_network_params()
 
@@ -197,8 +213,11 @@ class RecurrentNeuralNetwork:
         self.neurons = neurons
 
         self.net = Network(collect())
-        self.net.add(self._monitors)
+        self.net.add(self._monitors.as_tuple())
         self.net.add(self.synapses)
+
+        # Clear seeding
+        np.random.seed(None)
 
     def _get_synapses(self, neurons, N_E):
 
@@ -207,13 +226,13 @@ class RecurrentNeuralNetwork:
 
         exc_synapses = Synapses(excitatory_neurons,
                                 target=neurons,
-                                on_pre="v += J",
+                                on_pre="v += J*w",
                                 delay=self.D,
                                 name="exc")
         exc_synapses.connect(p=self.p_c, condition='i!=j')
         inhib_synapses = Synapses(inhibitory_neurons,
                                   target=neurons,
-                                  on_pre="v += -g*J",
+                                  on_pre="v += -g*J*w",
                                   delay=self.D,
                                   name="inhib")
         inhib_synapses.connect(p=self.p_c,
@@ -236,13 +255,19 @@ class RecurrentNeuralNetwork:
 
         return C_E, N_E
 
-    def setup_monitors(self, neurons, i=50):
-        self._rate_monitor = PopulationRateMonitor(neurons)
-        # record from the first i excitatory neurons
-        self._spike_monitor = SpikeMonitor(neurons[:i])
-        self._state_monitor = StateMonitor(neurons[:i], 'v', record=True)
+    def set_w(self, w):
+        self.w = w
 
-        return self._rate_monitor, self._spike_monitor, self._state_monitor
+    def get_w(self):
+        return self.w
+
+    def setup_monitors(self, neurons, i=-1) -> Monitors:
+        rate_monitor = PopulationRateMonitor(neurons)
+        # record from the first i excitatory neurons
+        spike_monitor = SpikeMonitor(neurons[:i])
+        state_monitor = StateMonitor(neurons[:i], 'v', record=True)
+
+        return Monitors(state=state_monitor, spike=spike_monitor, rate=rate_monitor)
 
     def plot_connectivity(self, show=True):
         if self.synapses is None:
@@ -324,6 +349,7 @@ class RecurrentNeuralNetwork:
 
         if show:
             fig.show()
+            fig.clf()
 
         return fig, axs
 
