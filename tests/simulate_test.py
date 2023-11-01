@@ -6,6 +6,7 @@ from utils.simulate import RecurrentNeuralNetwork
 
 import matplotlib.pyplot as plt
 
+# plt.style.use('dark_background')
 
 class RecurrentNeuralNetworkTestCase(unittest.TestCase):
     test_rnn = RecurrentNeuralNetwork(n=10,
@@ -72,26 +73,33 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.assertIsNotNone(axs)
 
     def test_sim_various_w(self):
-        ws = [5, 10, 11]
+        ws = np.arange(9, 11, 0.1)
 
-        rnn = RecurrentNeuralNetwork(n=1000)
+        rnn = RecurrentNeuralNetwork(n=1000, w=10.6)
 
         rnn.store('various_w')
 
-        for i, w in enumerate(ws):
-            rnn.restore('various_w')
+        rnn.sim(1000)
+        rnn.plot_voltage(show=True)
+        # rnn.plot_connectivity(show=True)
+        rnn.plot_spike_distribution(show=True)
+        rnn.plot_spikes()
 
-            rnn.set_w(w)
-
-            rnn.sim(1000)
-
-            # = rnn.plot_state(show=True)
-            fig, axs = rnn.plot_spikes(show=False)
-            axs[0].set_title(f'w={w}')
-            fig.show()
-
-
-        self.assertTrue(True)
+        # for i, w in enumerate(ws):
+        #     rnn.restore('various_w')
+        #
+        #     rnn.set_w(w)
+        #
+        #     rnn.sim(1000)
+        #
+        #     # = rnn.plot_state(show=True)
+        #     fig, axs = rnn.plot_spikes(show=False)
+        #     axs[0].set_title(f'W={w:.2f}')
+        #     fig.show()
+        #     fig.savefig(f'{i:03}')
+        #
+        #
+        # self.assertTrue(True)
 
     def test_sim_spike_distr(self):
         rnn = RecurrentNeuralNetwork(n=1000, w=10)
@@ -103,9 +111,8 @@ class RecurrentNeuralNetworkTestCase(unittest.TestCase):
         self.assertTrue(True)
 
     def test_sim_plot_connectivity(self):
-        self.test_rnn.restore('test')
-        self.test_rnn.sim(100)
-        fig, axs = self.test_rnn.plot_connectivity(show=False)
+        rnn = RecurrentNeuralNetwork(n=10, p_c=0.5)
+        fig, axs = rnn.plot_connectivity(show=True)
 
         self.assertIsNotNone(fig)
         self.assertIsNotNone(axs)

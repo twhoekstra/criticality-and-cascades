@@ -340,8 +340,8 @@ class RecurrentNeuralNetwork:
 
         fig, axs = plt.subplots(1, 2)
 
-        axs[0].plot(np.zeros(self.n), np.arange(self.n), 'ok', ms=10)
-        axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', ms=10)
+        axs[0].plot(np.zeros(self.n), np.arange(self.n), 'ok', c='grey', ms=10)
+        axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', c='grey', ms=10)
 
         for S, c, offset in zip(
                 self._synapses,
@@ -435,13 +435,16 @@ class RecurrentNeuralNetwork:
 
         ax_spikes, ax_rates = gs.subplots(sharex="col")
 
-        ax_spikes.plot(self.spike_results.t_ms, self.spike_results.i, "|")
-        ax_rates.plot(self.rate_results.t_ms, self.rate_results.rate)
+        ax_spikes.plot(self.spike_results.t_ms, self.spike_results.i, "|", c='b')
+        ax_rates.plot(self.rate_results.t_ms, self.rate_results.rate, c='b')
 
         ax_spikes.set_yticks([])
 
         ax_spikes.set_xlim(t_range)
         ax_rates.set_xlim(t_range)
+
+        ax_spikes.set_ylabel('Neurons')
+        ax_rates.set_ylabel('Rate [Hz]')
 
         ax_rates.set_ylim(rate_range)
         ax_rates.set_xlabel("t [ms]")
