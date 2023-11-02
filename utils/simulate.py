@@ -233,7 +233,7 @@ class RecurrentNeuralNetwork:
             weight=self.theta
         )
 
-        self._monitors = self.setup_monitors(neurons)
+        self._monitors = self._setup_monitors(neurons)
         self._neurons = neurons
 
         self._net = Network(collect())
@@ -324,7 +324,7 @@ class RecurrentNeuralNetwork:
     def get_w(self):
         return self.w
 
-    def setup_monitors(self, neurons, i=-1) -> Monitors:
+    def _setup_monitors(self, neurons, i=-1) -> Monitors:
         rate_monitor = PopulationRateMonitor(neurons)
         # record from the first i excitatory neurons
         spike_monitor = SpikeMonitor(neurons[:i])
@@ -340,8 +340,8 @@ class RecurrentNeuralNetwork:
 
         fig, axs = plt.subplots(1, 2)
 
-        axs[0].plot(np.zeros(self.n), np.arange(self.n), 'ok', c='grey', ms=10)
-        axs[0].plot(np.ones(self.n), np.arange(self.n), 'ok', c='grey', ms=10)
+        axs[0].plot(np.zeros(self.n), np.arange(self.n), 'o', c='grey', ms=10)
+        axs[0].plot(np.ones(self.n), np.arange(self.n), 'o', c='grey', ms=10)
 
         for S, c, offset in zip(
                 self._synapses,
@@ -395,7 +395,7 @@ class RecurrentNeuralNetwork:
                           self.state_results.v_mV.shape[0]
                       ))
 
-        axs[0].set_xlabel('Time [ms]')
+
         axs[0].set_ylabel('Neuron')
 
         traces = self.state_results.v_mV.T
@@ -407,6 +407,7 @@ class RecurrentNeuralNetwork:
                         label='Leader neuron', c='yellow')
 
         axs[1].set_ylabel('Voltage [mV]')
+        axs[1].set_xlabel('Time [ms]')
         axs[1].legend()
 
         fig.subplots_adjust(hspace=0)
