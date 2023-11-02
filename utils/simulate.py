@@ -161,7 +161,7 @@ class RecurrentNeuralNetwork:
         self.seed = seed
         self._setup_network(seed)
 
-    def sim(self, sim_time_ms):
+    def sim(self, sim_time_ms, silent=False):
 
         tau = self.tau
         tau_rp = self.tau_rp
@@ -173,7 +173,7 @@ class RecurrentNeuralNetwork:
         D = self.D
         J = self.J
 
-        self._net.run(sim_time_ms * ms, report='text')
+        self._net.run(sim_time_ms * ms, report=(lambda *t: None) if silent else 'text')
 
         self.rate_results = RateResults(self._monitors.rate)
         self.spike_results = SpikeResults(self._monitors.spike)
