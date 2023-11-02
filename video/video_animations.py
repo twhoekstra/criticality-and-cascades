@@ -1,3 +1,4 @@
+# In our environment manim is not installed. To run this code you will need to manually install manim and latex.
 from manim import *
 
 class Titlescreen(Scene):
