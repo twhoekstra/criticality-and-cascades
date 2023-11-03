@@ -1,3 +1,5 @@
+"""By Wilco van Nes and Thijn Hoekstra"""
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -102,7 +104,8 @@ class RecurrentNeuralNetwork:
                  p_ext: float = 6E-4,
                  seed: int = None,
                  leader_rate: float = 100,
-                 timestep_ms: float = 0.1):
+                 timestep_ms: float = 0.1,
+                 record_voltage: bool = True,):
 
         """Initializes LIF RNN.
 
@@ -159,7 +162,7 @@ class RecurrentNeuralNetwork:
         self.rate_results: Optional[RateResults] = None
 
         self.seed = seed
-        self._setup_network(seed)
+        self._setup_network(seed, record_voltage=record_voltage)
 
     def sim(self, sim_time_ms, silent=False):
 
@@ -189,7 +192,7 @@ class RecurrentNeuralNetwork:
         self._net.restore(*args, **kwargs)
         return self
 
-    def _setup_network(self, seed: int = None):
+    def _setup_network(self, seed: int = None, record_voltage=True):
 
         # Set random number generator seed (optional)
         np.random.seed(seed)
@@ -233,7 +236,7 @@ class RecurrentNeuralNetwork:
             weight=self.theta
         )
 
-        self._monitors = self._setup_monitors(neurons)
+        self._monitors = self._setup_monitors(neurons, record_voltage=record_voltage)
         self._neurons = neurons
 
         self._net = Network(collect())
@@ -324,11 +327,11 @@ class RecurrentNeuralNetwork:
     def get_w(self):
         return self.w
 
-    def _setup_monitors(self, neurons, i=-1) -> Monitors:
+    def _setup_monitors(self, neurons, i=-1, record_voltage=True) -> Monitors:
         rate_monitor = PopulationRateMonitor(neurons)
         # record from the first i excitatory neurons
         spike_monitor = SpikeMonitor(neurons[:i])
-        state_monitor = StateMonitor(neurons[:i], 'v', record=True)
+        state_monitor = StateMonitor(neurons[:i], 'v', record=record_voltage)
 
         return Monitors(state=state_monitor, spike=spike_monitor,
                         rate=rate_monitor)
